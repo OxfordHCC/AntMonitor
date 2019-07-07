@@ -166,7 +166,7 @@ public class VpnController {
 
         VpnClient.prepareVPNconnection(incFilter, outFilter, incPacketConsumer, outPacketConsumer);
         Intent intent = new Intent(context, VpnClient.class);
-        // Specify that the servic should immediately establish the connection
+        // Specify that the service should immediately establish the connection
         intent.putExtra(VpnClient.EXTRA_CONNECT_ON_STARTUP, true);
         context.startService(intent);
     }
@@ -188,6 +188,23 @@ public class VpnController {
     public static void setSSLBumpingEnabled(Context context, boolean enabled)
             throws IllegalStateException {
         ForwarderManager.setSSLBumpingEnabled(context, enabled);
+    }
+
+    /**
+     * @param enabled enabled pass {@code true} to enable DNS cache, and
+     * pass {@code false} otherwise
+     */
+    public static void setDnsCacheEnabled(boolean enabled) {
+        ForwarderManager.KEEP_DNS_CACHE = enabled;
+    }
+
+    /**
+     * Lookup hostname in DNS cache
+     * @param address IP address to resolve
+     * @return Resolved IP address
+     */
+    public static String retrieveHostname(String address) {
+        return ForwarderManager.mDNScache.get(address);
     }
 
     /** @return {@code true} if SSL bumping is currently enabled, and {@code false} otherwise */

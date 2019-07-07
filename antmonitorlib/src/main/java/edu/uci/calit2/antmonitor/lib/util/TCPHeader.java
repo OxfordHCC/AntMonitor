@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
  *
  * @author Simon Langhoff, Janus Varmarken
  */
-class TCPHeader {
+public class TCPHeader {
     int sourcePort;
     int destinationPort;
     long sequenceNum;
@@ -79,7 +79,7 @@ class TCPHeader {
         this.options = options;
     }
 
-    public int getDestinationPort() {
+    public int tu() {
         return destinationPort;
     }
 
