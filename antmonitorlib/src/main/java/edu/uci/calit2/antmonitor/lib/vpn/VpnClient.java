@@ -19,6 +19,7 @@
 package edu.uci.calit2.antmonitor.lib.vpn;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -30,6 +31,7 @@ import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.os.AsyncTask;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Parcel;
@@ -43,9 +45,9 @@ import java.io.IOException;
 
 import edu.uci.calit2.antmonitor.lib.R;
 import edu.uci.calit2.antmonitor.lib.logging.PacketConsumer;
+import edu.uci.calit2.antmonitor.lib.logging.PacketLogQueue;
 import edu.uci.calit2.antmonitor.lib.logging.PacketProcessor;
 import edu.uci.calit2.antmonitor.lib.logging.PacketQueueReader;
-import edu.uci.calit2.antmonitor.lib.logging.PacketLogQueue;
 
 /**
  * This class is responsible for establishing and maintaining the VPN connection.
@@ -63,6 +65,8 @@ public class VpnClient extends android.net.VpnService {
     static final String VPN_STATE_BROADCAST_STATE_KEY = "edu.uci.calit2.anteater.VPN_STATE_BROADCAST_STATE_KEY";
 
     static final long STARTING_RECONNECT_DELAY_MILLIS = 5000;
+
+    final String CHANNEL_ID = "ant_channel_01";
 
     /**
      * Extra key used when launching a {@link VpnClient} via
@@ -211,7 +215,8 @@ public class VpnClient extends android.net.VpnService {
         startForeground(VPN_FOREGROUND_ID, buildVpnStateNotification());
 
         // Did client specify that we should connect the VPN right away?
-        boolean autoConnect = intent.getBooleanExtra(EXTRA_CONNECT_ON_STARTUP, false);
+        boolean autoConnect = false;
+        if (intent != null) autoConnect = intent.getBooleanExtra(EXTRA_CONNECT_ON_STARTUP, false);
         if (autoConnect) {
             Log.d(TAG, "Automatically connecting VPN as part of onStartCommand...");
             //DebugFile.AppendToDebugFile("Automatically connecting VPN as part of onStartCommand...");
@@ -272,6 +277,12 @@ public class VpnClient extends android.net.VpnService {
 
             // Third: update the ongoing VPN state notification.
             NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                CharSequence name = getString(R.string.notification_channel_name);
+                int importance = NotificationManager.IMPORTANCE_DEFAULT;
+                NotificationChannel mChannel = new NotificationChannel(CHANNEL_ID, name, importance);
+                mNotificationManager.createNotificationChannel(mChannel);
+            }
             mNotificationManager.notify(VPN_FOREGROUND_ID, buildVpnStateNotification());
         }
     }
@@ -718,6 +729,7 @@ public class VpnClient extends android.net.VpnService {
         notifBuilder.setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false));
         notifBuilder.setContentIntent(pendingIntent);
         notifBuilder.setOngoing(true);
+        notifBuilder.setChannelId(CHANNEL_ID);
 
         // Set detail text according to current VPN state.
         String stateStr;
