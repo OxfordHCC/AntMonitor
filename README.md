@@ -1,7 +1,11 @@
 # AntMonitor
-This is a repository for AntMonitor - a VPN-based packet capturing
-system for Android. For an overview of the project, please visit
-the project
+This repository updates the powerful
+[AntMonitor library](https://github.com/UCI-Networking-Group/AntMonitor)
+to Android API Level 26 (Android 8.0),
+so that it can be used on the Google Play Store.
+
+AntMonitor is a VPN-based packet capturing system for Android.
+For an overview of the project, please visit the project
 [website](http://athinagroup.eng.uci.edu/projects/antmonitor/).
 
 * The core capabilities of AntMonitor to intercept and inspect outgoing
