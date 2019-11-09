@@ -211,6 +211,8 @@ public class VpnClient extends android.net.VpnService {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "onStartCommand...");
+
         // Start the service as a foreground service.
         startForeground(VPN_FOREGROUND_ID, buildVpnStateNotification());
 
@@ -279,7 +281,7 @@ public class VpnClient extends android.net.VpnService {
             NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 CharSequence name = getString(R.string.notification_channel_name);
-                int importance = NotificationManager.IMPORTANCE_DEFAULT;
+                int importance = NotificationManager.IMPORTANCE_LOW;
                 NotificationChannel mChannel = new NotificationChannel(CHANNEL_ID, name, importance);
                 mNotificationManager.createNotificationChannel(mChannel);
             }
@@ -714,9 +716,9 @@ public class VpnClient extends android.net.VpnService {
      */
     private Notification buildVpnStateNotification() {
         //TODO (library modularization) - allow them to pass image to display?
-        Intent notificationIntent = new Intent(this, VpnClient.class);
-        notificationIntent.setAction(VPN_ACTION_NOTIFICATION);
-//        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        Class main = VpnClient.class;
+        Intent notificationIntent = new Intent(VPN_ACTION_NOTIFICATION);
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
                 notificationIntent, 0);
 
