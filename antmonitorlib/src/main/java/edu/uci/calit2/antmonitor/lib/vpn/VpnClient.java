@@ -37,6 +37,7 @@ import android.os.IBinder;
 import android.os.Parcel;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -278,15 +279,20 @@ public class VpnClient extends android.net.VpnService {
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
 
             // Third: update the ongoing VPN state notification.
-            NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                CharSequence name = getString(R.string.notification_channel_name);
-                int importance = NotificationManager.IMPORTANCE_LOW;
-                NotificationChannel mChannel = new NotificationChannel(CHANNEL_ID, name, importance);
-                mNotificationManager.createNotificationChannel(mChannel);
-            }
-            mNotificationManager.notify(VPN_FOREGROUND_ID, buildVpnStateNotification());
+            NotificationManager service =
+                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            service.notify(VPN_FOREGROUND_ID, buildVpnStateNotification());
         }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private String createNotificationChannel(String channelId, String channelName) {
+        NotificationChannel chan = new NotificationChannel(channelId,
+                channelName, NotificationManager.IMPORTANCE_LOW);
+        NotificationManager service =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        service.createNotificationChannel(chan);
+        return channelId;
     }
 
     /**
@@ -715,8 +721,6 @@ public class VpnClient extends android.net.VpnService {
      * of the VPN connection.
      */
     private Notification buildVpnStateNotification() {
-        //TODO (library modularization) - allow them to pass image to display?
-        Class main = VpnClient.class;
         Intent notificationIntent = new Intent(VPN_ACTION_NOTIFICATION);
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
@@ -725,13 +729,17 @@ public class VpnClient extends android.net.VpnService {
         Bitmap icon = BitmapFactory.decodeResource(getResources(),
                 R.mipmap.ic_launcher);
 
-        NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(this);
+        String channelId = "";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            channelId = createNotificationChannel(CHANNEL_ID, getString(R.string.notification_channel_name));
+
+        NotificationCompat.Builder notifBuilder =
+                new NotificationCompat.Builder(this, channelId);
         notifBuilder.setContentTitle(getResources().getString(R.string.notification_title_vpnservice));
         notifBuilder.setSmallIcon(R.mipmap.shield);
         notifBuilder.setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false));
         notifBuilder.setContentIntent(pendingIntent);
         notifBuilder.setOngoing(true);
-        notifBuilder.setChannelId(CHANNEL_ID);
 
         // Set detail text according to current VPN state.
         String stateStr;
