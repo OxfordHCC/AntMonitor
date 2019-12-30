@@ -18,6 +18,7 @@
  */
 package edu.uci.calit2.antmonitor.lib.vpn;
 
+import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -26,6 +27,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
@@ -43,6 +45,8 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import edu.uci.calit2.antmonitor.lib.R;
 import edu.uci.calit2.antmonitor.lib.logging.PacketConsumer;
@@ -94,6 +98,27 @@ public class VpnClient extends android.net.VpnService {
 
     private static IncPacketFilter mIncPacketFilter;
     private static OutPacketFilter mOutPacketFilter;
+
+    private static List<String> excludedApps = new ArrayList<>();
+    private static String DNS_SERVER = "8.8.8.8";
+
+    static String getDnsServer () {
+        return DNS_SERVER;
+    }
+
+    static void setDnsServer (String dnsServer) {
+        DNS_SERVER = dnsServer;
+    }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    static void setExcludedApps (List<String> excludedApps) {
+        VpnClient.excludedApps = excludedApps;
+    }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    static void clearExcludedApps () {
+        VpnClient.excludedApps.clear();
+    }
 
     /**
      * Delay in milliseconds before attempting to reconnect.
@@ -286,13 +311,12 @@ public class VpnClient extends android.net.VpnService {
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    private String createNotificationChannel(String channelId, String channelName) {
-        NotificationChannel chan = new NotificationChannel(channelId,
-                channelName, NotificationManager.IMPORTANCE_LOW);
+    private void createNotificationChannel() {
+        NotificationChannel chan = new NotificationChannel(CHANNEL_ID,
+                getString(R.string.notification_channel_name), NotificationManager.IMPORTANCE_NONE);
         NotificationManager service =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         service.createNotificationChannel(chan);
-        return channelId;
     }
 
     /**
@@ -385,7 +409,18 @@ public class VpnClient extends android.net.VpnService {
         builder.addRoute("0.0.0.0", 0);
 
         // Use Google's DNS server
-        builder.addDnsServer("8.8.8.8");
+        builder.addDnsServer(DNS_SERVER);
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            for (String excludedApp: excludedApps) {
+                try {
+                    builder.addDisallowedApplication(excludedApp);
+                } catch (PackageManager.NameNotFoundException ex) {
+                    //
+                }
+            }
+        }
+
 
         // Create a new interface using the builder and save the parameters.
         ParcelFileDescriptor tunInterface = null;
@@ -627,7 +662,11 @@ public class VpnClient extends android.net.VpnService {
      *                    Note that even if a delay is specified, this method is asynchronous.
      *                    The connect attempt is scheduled to run on a background thread.
      * @param retryOnFailure Specifies what to do in case the connect attempt fails.
-     *      {@code true}: repeatedly try to connect until successfully connected.
+     *      {@code true}: repeatedly try to connect
+        at com.fsck.k9.activity.setup.AccountSetupCheckSettings$CheckAccountTask.checkOutgoing(AccountSetupCheckSettings.java:484)
+        at com.fsck.k9.activity.setup.AccountSetupCheckSettings$CheckAccountTask.checkServerSettings(AccountSetupCheckSettings.java:471)
+        at com.fsck.k9.activity.setup.AccountSetupCheckSettings$CheckAccountTask.doInBackground(AccountSetupCheckSettings.java:424)
+        at com.fsck.k9.activity.setup.AccountSetupCheckSettings$CheckAccountTask.doInBackground(AccountSetupCheckSettings.java:402) until successfully connected.
      *                       {@code false}: only perform a single attempt at connecting the VPN.
      */
     private void connect(long delayMillis, final boolean retryOnFailure) {
@@ -729,12 +768,10 @@ public class VpnClient extends android.net.VpnService {
         Bitmap icon = BitmapFactory.decodeResource(getResources(),
                 R.mipmap.ic_launcher);
 
-        String channelId = "";
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            channelId = createNotificationChannel(CHANNEL_ID, getString(R.string.notification_channel_name));
-
+            createNotificationChannel();
         NotificationCompat.Builder notifBuilder =
-                new NotificationCompat.Builder(this, channelId);
+                new NotificationCompat.Builder(this, CHANNEL_ID);
         notifBuilder.setContentTitle(getResources().getString(R.string.notification_title_vpnservice));
         notifBuilder.setSmallIcon(R.mipmap.shield);
         notifBuilder.setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false));
